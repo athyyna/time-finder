@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time Finder</title>
+<style>
+body{width:380px;margin:0;padding:14px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#222;background:linear-gradient(180deg,#dbeafe 0%,#eff6ff 40%,#f7f5f0 100%);background-attachment:fixed;font-size:14px}
+h1{font-size:18px;margin:0;color:#fff}h2{font-size:14px;margin:0 0 8px;color:#1e40af}
+header{background:linear-gradient(135deg,#1e3a8a,#2563eb,#38bdf8);color:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(37,99,235,.25)}
+header p{margin:4px 0 0;color:#dbeafe}
+.card{background:#fff;border:1px solid #e3ded2;border-radius:12px;padding:12px;margin-bottom:10px}
+.live{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.live div{background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;padding:8px}
+.live b{display:block;font-size:12px;color:#666}.live span{font-size:17px;font-weight:650}
+label{display:block;margin:8px 0;font-weight:600}
+input,select{width:100%;margin-top:4px;padding:7px;border:1px solid #ccc;border-radius:8px;font-size:14px;box-sizing:border-box}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.quick button,.primary{border:1px solid #ddd;background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer}
+.check{display:flex;gap:8px;align-items:flex-start;font-weight:500}
+.check input{width:auto;margin:2px 0 0}
+.results{margin-top:10px}.row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid #eee}
+.row:first-child{border-top:0}.row b{font-size:13px}.row span{white-space:nowrap}
+.badge{font-size:11px;padding:2px 7px;border-radius:999px;margin-left:6px;white-space:nowrap}
+.good{background:#dff3e2}.ok{background:#fff0c2}.night{background:#f3dede}
+.primary{width:100%;margin-top:10px;padding:9px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:1px solid #1d4ed8;color:#fff;font-weight:650}
+.hint{color:#666;font-size:12px;line-height:1.45}code{font-size:11px}
+.best .slot{border-top:1px solid #eee;padding:8px 0}.best .slot:first-child{border-top:0}
+.slot b{font-size:15px}.slot p{margin:4px 0 0;color:#444;font-size:12px;line-height:1.5}
+footer{color:#888;font-size:11px;text-align:center;padding:4px}
+
+body{width:auto;max-width:620px;margin:0 auto;padding:20px}
+.live{grid-template-columns:repeat(4,1fr)}
+@media(max-width:560px){.live{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🕐 Time Finder</h1>
+  <p>Singapore · India · UK · Pacific — standalone version. No install needed: keep this tab open, pin it, or bookmark it.</p>
+</header>
+
+<section class="card">
+  <h2>Right now</h2>
+  <div id="live" class="live"></div>
+  <p class="hint">Live clocks update while the popup is open. UK and Pacific shift automatically for daylight saving.</p>
+</section>
+
+<section class="card">
+  <h2>Convert a time</h2>
+  <label>Date <input id="date" type="date"></label>
+  <label>Time <input id="time" type="time"></label>
+  <label>That time is in
+    <select id="fromZone">
+      <option value="Asia/Singapore">Singapore</option>
+      <option value="Asia/Kolkata">India</option>
+      <option value="Europe/London">UK · London</option>
+      <option value="America/Los_Angeles">US · Pacific</option>
+    </select>
+  </label>
+  <div class="quick">
+    <button type="button" data-quick="now">Now</button>
+    <button type="button" data-quick="tomorrow9">Tomorrow 9am SG</button>
+    <button type="button" data-quick="tomorrow17">Tomorrow 5pm SG</button>
+  </div>
+  <label class="check"><input id="includePacific" type="checkbox" checked> Include US Pacific in results &amp; best times</label>
+  <div id="results" class="results"></div>
+  <button id="copy" type="button" class="primary">Copy message to paste into chat / email</button>
+  <p id="copied" class="hint" hidden>Copied ✓</p>
+  <p class="hint">The copied message also includes a Discord timestamp (<code>&lt;t:…:F&gt;</code>) — the same trick the timezoner bot uses, so Discord readers each see it in their own zone.</p>
+</section>
+
+<section class="card">
+  <h2>Best times on that date</h2>
+  <p class="hint">No hour puts all four in 9–5 — Singapore and Pacific are 15–16 hours apart. These are the least-bad compromises, ranked by how many zones land in daytime.</p>
+  <div id="best" class="best"></div>
+</section>
+
+<footer>Offline. No sign-in, no server. Times use your browser's built-in timezone data.</footer>
+<script>
+// Time Finder — no libraries, no network. Uses the browser's own IANA timezone
+// data (Intl), so UK BST/GMT and Pacific PDT/PST daylight saving are handled
+// automatically, unlike a hard-coded UTC-offset table.
+const ZONES = [
+  { id: 'sg', label: 'Singapore', tz: 'Asia/Singapore' },
+  { id: 'in', label: 'India', tz: 'Asia/Kolkata' },
+  { id: 'uk', label: 'UK · London', tz: 'Europe/London' },
+  { id: 'us', label: 'US · Pacific', tz: 'America/Los_Angeles' },
+];
+const $ = (id) => document.getElementById(id);
+
+function parts(date, tz) {
+  const out = {};
+  for (const p of new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
+    weekday: 'short', timeZoneName: 'short',
+  }).formatToParts(date)) out[p.type] = p.value;
+  return out;
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+function ymd(p) { return `${p.year}-${pad(p.month)}-${pad(p.day)}`; }
+function dayDiff(aYmd, bYmd) {
+  const [ay, am, ad] = aYmd.split('-').map(Number);
+  const [by, bm, bd] = bYmd.split('-').map(Number);
+  return Math.round((Date.UTC(ay, am - 1, ad) - Date.UTC(by, bm - 1, bd)) / 86400000);
+}
+// Wall-clock time in `tz` -> the UTC instant it represents. Iterating twice
+// settles it even across a DST transition.
+function zonedToUtc(y, m, d, h, mi, tz) {
+  const target = Date.UTC(y, m - 1, d, h, mi);
+  let guess = target;
+  for (let i = 0; i < 2; i++) {
+    const p = parts(new Date(guess), tz);
+    const wallAsUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+    guess += (target - wallAsUtc);
+  }
+  return new Date(guess);
+}
+function verdict(hour) {
+  if (hour >= 9 && hour <= 17) return ['Daytime ✓', 'good'];
+  if (hour === 8 || (hour >= 18 && hour <= 20)) return ['Edge', 'ok'];
+  return ['Night / early', 'night'];
+}
+function activeZones() {
+  return ZONES.filter((z) => z.id !== 'us' || $('includePacific').checked);
+}
+function renderLive() {
+  const now = new Date();
+  $('live').innerHTML = ZONES.map((z) => {
+    const p = parts(now, z.tz);
+    return `<div><b>${z.label} · ${p.timeZoneName}</b><span>${pad(p.hour)}:${pad(p.minute)}</span></div>`;
+  }).join('');
+}
+function current() {
+  const [y, m, d] = $('date').value.split('-').map(Number);
+  const [h, mi] = $('time').value.split(':').map(Number);
+  return zonedToUtc(y, m, d, h, mi, $('fromZone').value);
+}
+function renderAll() {
+  const instant = current();
+  const fromYmd = $('date').value;
+  const lines = [];
+  $('results').innerHTML = activeZones().map((z) => {
+    const p = parts(instant, z.tz);
+    const diff = dayDiff(ymd(p), fromYmd);
+    const dayNote = diff === 0 ? '' : diff === 1 ? ' · tomorrow' : diff === -1 ? ' · yesterday' : ` · ${diff > 0 ? '+' : ''}${diff}d`;
+    const [v, cls] = verdict(+p.hour);
+    lines.push(`${z.label}: ${p.weekday} ${+p.day} ${p.month}/${p.year}, ${pad(p.hour)}:${pad(p.minute)} ${p.timeZoneName}${dayNote}`);
+    return `<div class="row"><div><b>${z.label}</b><span class="badge ${cls}">${v}</span><br><small>${p.weekday}, ${pad(p.hour)}:${pad(p.minute)} ${p.timeZoneName}${dayNote}</small></div><span>${pad(p.hour)}:${pad(p.minute)}</span></div>`;
+  }).join('');
+  // Best times: score every hour of the Singapore date of the chosen
+  // instant, anchored in Singapore (Athena's home zone), so the ranking
+  // is stable whichever zone converts from.
+  const sg = parts(instant, 'Asia/Singapore');
+  const [y, m, d] = [+sg.year, +sg.month, +sg.day];
+  const zones = activeZones();
+  const scored = [];
+  for (let h = 0; h < 24; h++) {
+    const inst = zonedToUtc(y, m, d, h, 0, 'Asia/Singapore');
+    const rows = zones.map((z) => ({ z, p: parts(inst, z.tz) }));
+    let score = 0, daytime = 0;
+    for (const r of rows) {
+      const hr = +r.p.hour;
+      if (hr >= 9 && hr <= 17) { score += 2; daytime++; }
+      else if (hr === 8 || (hr >= 18 && hr <= 20)) score += 1;
+      else if (hr >= 0 && hr <= 6) score -= 1;
+    }
+    scored.push({ h, score, daytime, rows });
+  }
+  scored.sort((a, b) => b.score - a.score || b.daytime - a.daytime);
+  $('best').innerHTML = scored.slice(0, 3).map((s, i) =>
+    `<div class="slot"><b>#${i + 1} — ${pad(s.h)}:00 Singapore</b><p>${s.rows.map((r) =>
+      `${r.z.label} ${pad(r.p.hour)}:${pad(r.p.minute)} ${r.p.timeZoneName}`).join(' · ')}</p></div>`).join('');
+  $('copy').dataset.text =
+    `Proposed time:\n${lines.join('\n')}\nDiscord timestamp (renders in each reader's own zone): <t:${Math.floor(instant.getTime() / 1000)}:F>`;
+  $('copied').hidden = true;
+}
+function setFromZone(tz, ymdStr, hhmm) {
+  $('fromZone').value = tz; $('date').value = ymdStr; $('time').value = hhmm; renderAll();
+}
+document.querySelectorAll('[data-quick]').forEach((btn) => btn.addEventListener('click', () => {
+  const now = new Date();
+  const sg = parts(now, 'Asia/Singapore');
+  const sgToday = ymd(sg);
+  if (btn.dataset.quick === 'now') setFromZone('Asia/Singapore', sgToday, `${pad(sg.hour)}:${pad(sg.minute)}`);
+  if (btn.dataset.quick === 'tomorrow9' || btn.dataset.quick === 'tomorrow17') {
+    const t = zonedToUtc(+sg.year, +sg.month, +sg.day, 0, 0, 'Asia/Singapore');
+    const tm = new Date(t.getTime() + 86400000);
+    setFromZone('Asia/Singapore', ymd(parts(tm, 'Asia/Singapore')),
+      btn.dataset.quick === 'tomorrow9' ? '09:00' : '17:00');
+  }
+}));
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('copy').dataset.text); $('copied').hidden = false; }
+  catch { /* clipboard unavailable in some contexts; text is on screen to copy manually */ }
+});
+['date', 'time', 'fromZone', 'includePacific'].forEach((id) =>
+  $(id).addEventListener('change', renderAll));
+$('time').addEventListener('input', renderAll);
+// Defaults: today + now, in Singapore time.
+(function init() {
+  const now = new Date();
+  const sg = parts(now, 'Asia/Singapore');
+  $('date').value = ymd(sg);
+  $('time').value = `${pad(sg.hour)}:${pad(sg.minute)}`;
+  renderLive(); renderAll();
+  setInterval(renderLive, 15000);
+})();
+
+</script>
+</body>
+</html>
