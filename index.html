@@ -9,6 +9,9 @@ body{width:380px;margin:0;padding:14px;font-family:system-ui,-apple-system,Segoe
 h1{font-size:18px;margin:0;color:#fff}h2{font-size:14px;margin:0 0 8px;color:#1e40af}
 header{background:linear-gradient(135deg,#1e3a8a,#2563eb,#38bdf8);color:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(37,99,235,.25)}
 header p{margin:4px 0 0;color:#dbeafe}
+.now{margin-top:12px;background:rgba(255,255,255,.18);border-radius:10px;padding:10px 12px}
+#nowClock{display:block;font-size:28px;font-weight:700;letter-spacing:1px;line-height:1.1}
+#nowDate{font-size:12px;color:#dbeafe}
 .card{background:#fff;border:1px solid #e3ded2;border-radius:12px;padding:12px;margin-bottom:10px}
 .live{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .live div{background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;padding:8px}
@@ -30,20 +33,22 @@ input,select{width:100%;margin-top:4px;padding:7px;border:1px solid #ccc;border-
 footer{color:#888;font-size:11px;text-align:center;padding:4px}
 
 body{width:auto;max-width:620px;margin:0 auto;padding:20px}
-.live{grid-template-columns:repeat(4,1fr)}
-@media(max-width:560px){.live{grid-template-columns:1fr 1fr}}
+.live{grid-template-columns:repeat(5,1fr)}
+@media(max-width:640px){.live{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:420px){.live{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 <header>
   <h1>🕐 Time Finder</h1>
-  <p>Singapore · India · UK · Pacific — standalone version. No install needed: keep this tab open, pin it, or bookmark it.</p>
+  <p>Singapore · Indonesia (Jakarta) · India · UK · Pacific — standalone version. No install needed: keep this tab open, pin it, or bookmark it.</p>
+  <div class="now"><span id="nowClock">--:--:--</span><span id="nowDate"></span></div>
 </header>
 
 <section class="card">
   <h2>Right now</h2>
   <div id="live" class="live"></div>
-  <p class="hint">Live clocks update while the popup is open. UK and Pacific shift automatically for daylight saving.</p>
+  <p class="hint">Live clocks update while the popup is open. UK and Pacific shift automatically for daylight saving; Singapore, Jakarta and India don't use it.</p>
 </section>
 
 <section class="card">
@@ -53,6 +58,7 @@ body{width:auto;max-width:620px;margin:0 auto;padding:20px}
   <label>That time is in
     <select id="fromZone">
       <option value="Asia/Singapore">Singapore</option>
+      <option value="Asia/Jakarta">Indonesia · Jakarta</option>
       <option value="Asia/Kolkata">India</option>
       <option value="Europe/London">UK · London</option>
       <option value="America/Los_Angeles">US · Pacific</option>
@@ -72,7 +78,7 @@ body{width:auto;max-width:620px;margin:0 auto;padding:20px}
 
 <section class="card">
   <h2>Best times on that date</h2>
-  <p class="hint">No hour puts all four in 9–5 — Singapore and Pacific are 15–16 hours apart. These are the least-bad compromises, ranked by how many zones land in daytime.</p>
+  <p class="hint">No hour puts all five in 9–5 — Singapore and Pacific are 15–16 hours apart. These are the least-bad compromises, ranked by how many zones land in daytime.</p>
   <div id="best" class="best"></div>
 </section>
 
@@ -83,6 +89,7 @@ body{width:auto;max-width:620px;margin:0 auto;padding:20px}
 // automatically, unlike a hard-coded UTC-offset table.
 const ZONES = [
   { id: 'sg', label: 'Singapore', tz: 'Asia/Singapore' },
+  { id: 'id', label: 'Indonesia · Jakarta', tz: 'Asia/Jakarta' },
   { id: 'in', label: 'India', tz: 'Asia/Kolkata' },
   { id: 'uk', label: 'UK · London', tz: 'Europe/London' },
   { id: 'us', label: 'US · Pacific', tz: 'America/Los_Angeles' },
@@ -131,6 +138,15 @@ function renderLive() {
     const p = parts(now, z.tz);
     return `<div><b>${z.label} · ${p.timeZoneName}</b><span>${pad(p.hour)}:${pad(p.minute)}</span></div>`;
   }).join('');
+}
+// Big ticking "what time is it now" clock, in Singapore time (Athena's home
+// zone). Seconds come from the device clock — seconds never differ by zone.
+function renderNowClock() {
+  const now = new Date();
+  const sg = parts(now, 'Asia/Singapore');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  $('nowClock').textContent = `${pad(sg.hour)}:${pad(sg.minute)}:${pad(now.getSeconds())}`;
+  $('nowDate').textContent = `${sg.weekday}, ${+sg.day} ${months[+sg.month - 1]} ${sg.year} · Singapore ${sg.timeZoneName}`;
 }
 function current() {
   const [y, m, d] = $('date').value.split('-').map(Number);
@@ -204,8 +220,9 @@ $('time').addEventListener('input', renderAll);
   const sg = parts(now, 'Asia/Singapore');
   $('date').value = ymd(sg);
   $('time').value = `${pad(sg.hour)}:${pad(sg.minute)}`;
-  renderLive(); renderAll();
+  renderLive(); renderNowClock(); renderAll();
   setInterval(renderLive, 15000);
+  setInterval(renderNowClock, 1000);
 })();
 
 </script>

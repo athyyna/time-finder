@@ -1,6 +1,6 @@
 # Time Finder
 
-A single-file timezone converter for Singapore, India, UK and US Pacific.
+A single-file timezone converter for Singapore, Jakarta, India, UK and US Pacific.
 No sign-in, no server, no data leaves your browser.
 
 ## Use it
@@ -13,12 +13,12 @@ No sign-in, no server, no data leaves your browser.
 
 ## What it does
 
-- Live clocks for all four zones.
-- Convert a date/time from any of the four zones, with tomorrow/yesterday
+- Live clocks for all five zones.
+- Convert a date/time from any of the five zones, with tomorrow/yesterday
   flagged when the date rolls over, and a Daytime / Edge / Night flag
   per zone.
 - Best times on that date: the top 3 Singapore-anchored hours, ranked by
-  how many zones land in daytime. No hour puts all four in 9–5, because
+  how many zones land in daytime. No hour puts all five in 9–5, because
   Singapore and Pacific are 15–16 hours apart — the winner is usually
   around 5pm Singapore (afternoon India, morning UK, very late night /
   early morning Pacific).
