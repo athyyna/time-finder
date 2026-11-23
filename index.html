@@ -41,14 +41,14 @@ body{width:auto;max-width:620px;margin:0 auto;padding:20px}
 <body>
 <header>
   <h1>🕐 Time Finder</h1>
-  <p>Singapore · Indonesia (Jakarta) · India · UK · Pacific — standalone version. No install needed: keep this tab open, pin it, or bookmark it.</p>
+  <p>Singapore · Indonesia (Jakarta) · India · UK · San Francisco — standalone version. No install needed: keep this tab open, pin it, or bookmark it.</p>
   <div class="now"><span id="nowClock">--:--:--</span><span id="nowDate"></span></div>
 </header>
 
 <section class="card">
   <h2>Right now</h2>
   <div id="live" class="live"></div>
-  <p class="hint">Live clocks update while the popup is open. UK and Pacific shift automatically for daylight saving; Singapore, Jakarta and India don't use it.</p>
+  <p class="hint">Live clocks update while the popup is open. UK and San Francisco (Pacific) shift automatically for daylight saving; Singapore, Jakarta and India don't use it.</p>
 </section>
 
 <section class="card">
@@ -61,7 +61,7 @@ body{width:auto;max-width:620px;margin:0 auto;padding:20px}
       <option value="Asia/Jakarta">Indonesia · Jakarta</option>
       <option value="Asia/Kolkata">India</option>
       <option value="Europe/London">UK · London</option>
-      <option value="America/Los_Angeles">US · Pacific</option>
+      <option value="America/Los_Angeles">San Francisco (Pacific)</option>
     </select>
   </label>
   <div class="quick">
@@ -69,7 +69,7 @@ body{width:auto;max-width:620px;margin:0 auto;padding:20px}
     <button type="button" data-quick="tomorrow9">Tomorrow 9am SG</button>
     <button type="button" data-quick="tomorrow17">Tomorrow 5pm SG</button>
   </div>
-  <label class="check"><input id="includePacific" type="checkbox" checked> Include US Pacific in results &amp; best times</label>
+  <label class="check"><input id="includePacific" type="checkbox" checked> Include San Francisco in results &amp; best times</label>
   <div id="results" class="results"></div>
   <button id="copy" type="button" class="primary">Copy message to paste into chat / email</button>
   <p id="copied" class="hint" hidden>Copied ✓</p>
@@ -78,21 +78,21 @@ body{width:auto;max-width:620px;margin:0 auto;padding:20px}
 
 <section class="card">
   <h2>Best times on that date</h2>
-  <p class="hint">No hour puts all five in 9–5 — Singapore and Pacific are 15–16 hours apart. These are the least-bad compromises, ranked by how many zones land in daytime.</p>
+  <p class="hint">No hour puts all five in 9–5 — Singapore and San Francisco are 15–16 hours apart. These are the least-bad compromises, ranked by how many zones land in daytime.</p>
   <div id="best" class="best"></div>
 </section>
 
 <footer>Offline. No sign-in, no server. Times use your browser's built-in timezone data.</footer>
 <script>
 // Time Finder — no libraries, no network. Uses the browser's own IANA timezone
-// data (Intl), so UK BST/GMT and Pacific PDT/PST daylight saving are handled
+// data (Intl), so UK BST/GMT and San Francisco (Pacific) PDT/PST daylight saving are handled
 // automatically, unlike a hard-coded UTC-offset table.
 const ZONES = [
   { id: 'sg', label: 'Singapore', tz: 'Asia/Singapore' },
   { id: 'id', label: 'Indonesia · Jakarta', tz: 'Asia/Jakarta' },
   { id: 'in', label: 'India', tz: 'Asia/Kolkata' },
   { id: 'uk', label: 'UK · London', tz: 'Europe/London' },
-  { id: 'us', label: 'US · Pacific', tz: 'America/Los_Angeles' },
+  { id: 'us', label: 'San Francisco (Pacific)', tz: 'America/Los_Angeles' },
 ];
 const $ = (id) => document.getElementById(id);
 
